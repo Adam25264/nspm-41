@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartTendance – NSPM Staff Dashboard</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        :root {
+            --primary: #44ff44;
+            --primary-dark: #1a8833;
+            --danger: #ff5555;
+            --warning: #ffaa00;
+            --dark: #121212;
+            --darker: #0a0a0a;
+            --card-bg: #1a1a1a;
+            --card-border: #333;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Auth Styles */
+        .auth-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+        }
+        
+        .auth-box {
+            background: #2a2a2a;
+            width: 100%;
+            max-width: 450px;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+        
+        .auth-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            color: var(--primary);
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+        
+        .auth-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .auth-body {
+            padding: 30px 25px;
+        }
+        
+        .staff-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: var(--darker);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--primary);
+        }
+        
+        .staff-badge i {
+            color: var(--primary);
+            font-size: 20px;
+        }
+        
+        .form-toggle {
+            display: flex;
+            margin-bottom: 25px;
+            background: var(--darker);
+            border-radius: 10px;
+            padding: 5px;
+        }
+        
+        .toggle-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .toggle-btn.active {
+            background: var(--primary);
+            color: #000;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+        
+        .input-with-icon input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid var(--card-border);
+            border-radius: 10px;
+            background: var(--darker);
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+        
+        .input-with-icon input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            background: #33dd33;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: #000;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: #000;
+        }
+        
+        .forgot-password {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .forgot-password a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        /* Main App */
+        .app-container {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--card-bg) 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid var(--card-border);
+            position: relative;
+        }
+        
+        .header h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        .staff-info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--card-bg) 100%);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            max-width: 300px;
+        }
+        
+        .staff-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .staff-details h3 {
+            color: var(--primary);
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        
+        .staff-details p {
+            margin: 3px 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        
+        .nav-buttons {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .nav-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, #22cc22 100%);
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-btn.active {
+            background: linear-gradient(135deg, var(--danger) 0%, #cc2222 100%);
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--card-bg) 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid var(--card-border);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+        
+        .attendance-summary {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--card-bg) 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--primary);
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .summary-stat {
+            background: rgba(68, 255, 68, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .summary-stat .number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .clockins-container {
+            background: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            margin-bottom: 20px;
+        }
+        
+        .table-header {
+            background: var(--darker);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .clockins-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .clockins-table th {
+            background: var(--darker);
+            color: var(--primary);
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .clockins-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--text-primary);
+        }
+        
+        .clockins-table tr:hover {
+            background: var(--darker);
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .status-clockin {
+            background: #113311;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .status-clockout {
+            background: #331111;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+        
+        .dashboard-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            margin: 2px;
+        }
+        
+        .dashboard-btn-primary {
+            background: var(--primary);
+            color: #000;
+        }
+        
+        .dashboard-btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .dashboard-btn-warning {
+            background: var(--warning);
+            color: #000;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid var(--primary);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .qr-code-container {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            display: inline-block;
+            margin: 15px 0;
+        }
+        
+        .qr-code-image {
+            width: 200px;
+            height: 200px;
+        }
+        
+        .qr-timer {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 10px;
+            background: var(--darker);
+            border-radius: 5px;
+        }
+        
+        .live-scanning-indicator {
+            display: inline-flex;
+            align-items: center;
+            background: #113311;
+            color: var(--primary);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            margin: 10px 0;
+        }
+        
+        .auto-scan-status {
+            background: #113311;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid var(--primary);
+        }
+        
+        .scan-progress {
+            width: 100%;
+            height: 15px;
+            background: #333;
+            border-radius: 8px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .scan-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #22cc22);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+        }
+        
+        /* Floating Notification */
+        .floating-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid var(--primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 10000;
+            max-width: 350px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #333;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        
+        .result-content {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid var(--primary);
+            max-width: 350px;
+            width: 90%;
+        }
+        
+        .result-success {
+            border-color: var(--primary);
+        }
+        
+        .result-error {
+            border-color: var(--danger);
+        }
+        
+        .result-icon {
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .staff-info-panel {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 15px;
+                max-width: 100%;
+            }
+            
+            .nav-buttons {
+                flex-direction: column;
+            }
+            
+            .nav-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .clockins-table {
+                font-size: 12px;
+            }
+            
+            .clockins-table th,
+            .clockins-table td {
+                padding: 8px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Section -->
+    <div id="authSection" class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <h1><i class="fas fa-id-card"></i> SmartTendance</h1>
+                <p>NSPM Staff Dashboard</p>
+            </div>
+            
+            <div class="auth-body">
+                <div class="staff-badge">
+                    <i class="fas fa-id-badge"></i>
+                    <span>NSPM Staff Portal</span>
+                </div>
+                
+                <div class="form-toggle">
+                    <button class="toggle-btn active" id="loginToggle">Login</button>
+                    <button class="toggle-btn" id="signupToggle">Sign Up</button>
+                </div>
+                
+                <!-- Login Form -->
+                <form id="loginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label>Staff ID</label>
+                        <div class="input-with-icon">
+                            <input type="text" id="loginId" placeholder="e.g., NSPM/STF/001" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="loginPassword" placeholder="Enter password" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn">
+                        <i class="fas fa-sign-in-alt"></i> Login to Dashboard
+                    </button>
+                    
+                    <div class="forgot-password">
+                        <a href="#" id="forgotPasswordLink">Forgot password?</a>
+                    </div>
+                </form>
+                
+                <!-- Signup Form -->
+                <form id="signupForm" class="auth-form">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <div class="input-with-icon">
+                            <input type="text" id="fullName" placeholder="Enter full name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email</label>
+                        <div class="input-with-icon">
+                            <input type="email" id="email" placeholder="Enter email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Staff ID</label>
+                        <div class="input-with-icon">
+                            <input type="text" id="userId" placeholder="e.g., NSPM/STF/001" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Department</label>
+                        <div class="input-with-icon">
+                            <input type="text" id="department" placeholder="Enter department" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Location</label>
+                        <div class="input-with-icon">
+                            <input type="text" id="location" placeholder="Enter location" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="signupPassword" placeholder="Create password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="confirmPassword" placeholder="Confirm password" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn">
+                        <i class="fas fa-user-plus"></i> Create Account
+                    </button>
+                </form>
+                
+                <!-- Forgot Password Form -->
+                <form id="forgotPasswordForm" class="auth-form">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <div class="input-with-icon">
+                            <input type="email" id="forgotEmail" placeholder="Enter email" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn">
+                        <i class="fas fa-paper-plane"></i> Send Reset Link
+                    </button>
+                    
+                    <div class="forgot-password">
+                        <a href="#" id="backToLoginLink">Back to Login</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="app-container">
+        <div class="header">
+            <h1><i class="fas fa-id-card"></i> SmartTendance - NSPM Staff Dashboard</h1>
+            <p>Powered by Nigeria Security Printing and Minting Plc</p>
+            
+            <!-- Staff Info Panel -->
+            <div class="staff-info-panel" id="staffInfoPanel" style="display: none;">
+                <div class="staff-avatar" id="staffAvatar">U</div>
+                <div class="staff-details">
+                    <h3 id="staffName">Loading...</h3>
+                    <p><strong>ID:</strong> <span id="staffID">-</span></p>
+                    <p><strong>Dept:</strong> <span id="staffDept">-</span></p>
+                    <p><strong>Location:</strong> <span id="staffLocation">-</span></p>
+                </div>
+            </div>
+            
+            <div class="nav-buttons">
+                <button class="nav-btn active" onclick="showApp('clockin')">
+                    <i class="fas fa-clock"></i> Clock In
+                </button>
+                <button class="nav-btn" onclick="showApp('clockout')">
+                    <i class="fas fa-door-open"></i> Clock Out
+                </button>
+                <button class="nav-btn" onclick="showApp('attendance')">
+                    <i class="fas fa-users"></i> All Attendance
+                </button>
+            </div>
+        </div>
+
+        <!-- Clock In Section -->
+        <div id="clockin" class="tab-content" style="display: block;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-clock fa-2x"></i>
+                    <div class="stat-number" id="totalClockIns">0</div>
+                    <div>Total Clock Ins</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-play-circle fa-2x"></i>
+                    <div class="stat-number" id="activeClockIns">0</div>
+                    <div>Active Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-user-check fa-2x"></i>
+                    <div class="stat-number" id="todayClockIns">0</div>
+                    <div>Today's Clock Ins</div>
+                </div>
+            </div>
+
+            <div class="clockins-container">
+                <div class="table-header">
+                    <h3><i class="fas fa-list"></i> Clock In Sessions</h3>
+                    <div>
+                        <button class="dashboard-btn dashboard-btn-primary" onclick="openClockInModal()">
+                            <i class="fas fa-plus"></i> Start Clock In
+                        </button>
+                    </div>
+                </div>
+                <table class="clockins-table">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Location</th>
+                            <th>Start Time</th>
+                            <th>Status</th>
+                            <th>Scanned</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clockInsTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px;">
+                                <i class="fas fa-clock" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                                <h3>No Clock In Sessions</h3>
+                                <p>Click "Start Clock In" to begin</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Clock Out Section -->
+        <div id="clockout" class="tab-content" style="display: none;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-door-open fa-2x"></i>
+                    <div class="stat-number" id="totalClockOuts">0</div>
+                    <div>Total Clock Outs</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-check-circle fa-2x"></i>
+                    <div class="stat-number" id="completedToday">0</div>
+                    <div>Completed Today</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-hourglass-half fa-2x"></i>
+                    <div class="stat-number" id="activeClockOuts">0</div>
+                    <div>Active Sessions</div>
+                </div>
+            </div>
+
+            <div class="clockins-container">
+                <div class="table-header">
+                    <h3><i class="fas fa-list"></i> Clock Out Sessions</h3>
+                    <div>
+                        <button class="dashboard-btn dashboard-btn-primary" onclick="openClockOutModal()">
+                            <i class="fas fa-plus"></i> Start Clock Out
+                        </button>
+                    </div>
+                </div>
+                <table class="clockins-table">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Location</th>
+                            <th>Start Time</th>
+                            <th>Status</th>
+                            <th>Scanned</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clockOutTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px;">
+                                <i class="fas fa-door-open" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                                <h3>No Clock Out Sessions</h3>
+                                <p>Click "Start Clock Out" to begin</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- All Attendance Section -->
+        <div id="attendance" class="tab-content" style="display: none;">
+            <div class="attendance-summary">
+                <h3><i class="fas fa-chart-bar"></i> Today's Overview</h3>
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="number" id="summaryClockIns">0</div>
+                        <div>Clock Ins Today</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" id="summaryClockOuts">0</div>
+                        <div>Clock Outs Today</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="number" id="summaryPresent">0</div>
+                        <div>Currently Present</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="clockins-container">
+                <div class="table-header">
+                    <h3><i class="fas fa-users"></i> All Staff Attendance</h3>
+                    <div>
+                        <button class="dashboard-btn dashboard-btn-primary" onclick="refreshAttendanceNow()">
+                            <i class="fas fa-sync-alt"></i> Refresh Now
+                        </button>
+                    </div>
+                </div>
+                <table class="clockins-table">
+                    <thead>
+                        <tr>
+                            <th>Staff Name</th>
+                            <th>Staff ID</th>
+                            <th>Department</th>
+                            <th>Location</th>
+                            <th>Type</th>
+                            <th>Time</th>
+                            <th>Session</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allAttendanceBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px;">
+                                <i class="fas fa-users-slash" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                                <h3>No Attendance Records</h3>
+                                <p>Staff attendance will appear here when they scan QR codes</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Clock In Modal -->
+    <div id="newClockInModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: var(--primary);"><i class="fas fa-plus"></i> Start Clock In</h3>
+            <form id="newClockInForm">
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" id="newClockInDepartment" placeholder="Enter department" required>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="newClockInLocation" placeholder="Enter location" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="dashboard-btn dashboard-btn-danger" onclick="closeClockInModal()">Cancel</button>
+                    <button type="submit" class="dashboard-btn dashboard-btn-primary">Start Clock In</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Clock Out Modal -->
+    <div id="newClockOutModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: var(--danger);"><i class="fas fa-plus"></i> Start Clock Out</h3>
+            <form id="newClockOutForm">
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" id="newClockOutDepartment" placeholder="Enter department" required>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="newClockOutLocation" placeholder="Enter location" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="dashboard-btn dashboard-btn-danger" onclick="closeClockOutModal()">Cancel</button>
+                    <button type="submit" class="dashboard-btn dashboard-btn-primary">Start Clock Out</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- QR Modal -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: var(--primary);"><i class="fas fa-qrcode"></i> Clock In QR Code</h3>
+            <div class="qr-code-container" id="qrCodeContainer">
+                <div style="padding: 20px;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Generating QR Code...</p>
+                </div>
+            </div>
+            <div class="qr-timer" id="qrTimer">
+                <span>Valid for: <span id="timerValue">10:00</span></span>
+            </div>
+            <div class="live-scanning-indicator">
+                <i class="fas fa-satellite-dish"></i> LIVE SCANNING
+            </div>
+            <div class="auto-scan-status">
+                <p id="autoScanInfo">Waiting for staff to scan...</p>
+                <div class="scan-progress">
+                    <div class="scan-progress-bar" id="scanProgressBar"></div>
+                </div>
+                <p><span id="scannedCount">0</span> staff scanned</p>
+            </div>
+            <div class="qr-info" style="text-align: left; margin: 10px 0;">
+                <p><strong>Department:</strong> <span id="qrDepartment">-</span></p>
+                <p><strong>Location:</strong> <span id="qrLocation">-</span></p>
+                <p><strong>Session ID:</strong> <span id="qrSessionId" style="font-size: 10px;">-</span></p>
+            </div>
+            <div class="modal-buttons">
+                <button class="dashboard-btn dashboard-btn-danger" onclick="closeQRModal()">Close</button>
+                <button class="dashboard-btn dashboard-btn-primary" onclick="refreshQRCode()">Refresh QR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clock Out QR Modal -->
+    <div id="clockOutQrModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: var(--danger);"><i class="fas fa-qrcode"></i> Clock Out QR Code</h3>
+            <div class="qr-code-container" id="clockOutQrCodeContainer">
+                <div style="padding: 20px;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Generating QR Code...</p>
+                </div>
+            </div>
+            <div class="qr-timer" id="clockOutQrTimer">
+                <span>Valid for: <span id="clockOutTimerValue">10:00</span></span>
+            </div>
+            <div class="live-scanning-indicator" style="background: #331111; color: var(--danger);">
+                <i class="fas fa-satellite-dish"></i> CLOCK OUT MODE
+            </div>
+            <div class="auto-scan-status" style="background: #331111; border-color: var(--danger);">
+                <p id="clockOutAutoScanInfo">Waiting for staff to scan...</p>
+                <div class="scan-progress">
+                    <div class="scan-progress-bar" id="clockOutScanProgressBar" style="background: linear-gradient(90deg, var(--danger), #cc2222);"></div>
+                </div>
+                <p><span id="clockOutScannedCount">0</span> staff clocked out</p>
+            </div>
+            <div class="qr-info" style="text-align: left; margin: 10px 0;">
+                <p><strong>Department:</strong> <span id="clockOutQrDepartment">-</span></p>
+                <p><strong>Location:</strong> <span id="clockOutQrLocation">-</span></p>
+                <p><strong>Session ID:</strong> <span id="clockOutQrSessionId" style="font-size: 10px;">-</span></p>
+            </div>
+            <div class="modal-buttons">
+                <button class="dashboard-btn dashboard-btn-danger" onclick="closeClockOutQRModal()">Close</button>
+                <button class="dashboard-btn dashboard-btn-primary" onclick="refreshClockOutQRCode()">Refresh QR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loadingMessage">Processing...</p>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="resultModal" class="result-modal" style="display: none;">
+        <div class="result-content" id="resultContent">
+            <div class="result-icon" id="resultIcon"></div>
+            <h3 id="resultTitle">Success</h3>
+            <p id="resultMessage" style="margin: 15px 0;"></p>
+            <button class="btn" onclick="closeResult()">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBN0KexNQkEegTvAUA815xJrBqPUa45SOk",
+            authDomain: "smarttendance-a355b.firebaseapp.com",
+            databaseURL: "https://smarttendance-a355b-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "smarttendance-a355b",
+            storageBucket: "smarttendance-a355b.firebasestorage.app",
+            messagingSenderId: "448589697375",
+            appId: "1:448589697375:web:d5b02d378ba9746a68a6ea"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+
+        // =============================================
+        // APP STATE
+        // =============================================
+        let currentUser = null;
+        let clockIns = [];
+        let clockOuts = [];
+        let attendanceRecords = [];
+        let currentSessionId = null;
+        let currentClockOutSessionId = null;
+        let qrTimerInterval = null;
+        let clockOutQrTimerInterval = null;
+
+        // =============================================
+        // AUTH FUNCTIONS
+        // =============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            setupRealtimeAttendanceListener();
+            
+            // Check for saved user
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                updateStaffInfo(currentUser);
+                showDashboard();
+                loadSavedData();
+            } else {
+                showAuth();
+            }
+        });
+
+        function setupEventListeners() {
+            document.getElementById('loginToggle').addEventListener('click', () => {
+                document.getElementById('loginToggle').classList.add('active');
+                document.getElementById('signupToggle').classList.remove('active');
+                document.getElementById('loginForm').classList.add('active');
+                document.getElementById('signupForm').classList.remove('active');
+                document.getElementById('forgotPasswordForm').classList.remove('active');
+            });
+            
+            document.getElementById('signupToggle').addEventListener('click', () => {
+                document.getElementById('signupToggle').classList.add('active');
+                document.getElementById('loginToggle').classList.remove('active');
+                document.getElementById('signupForm').classList.add('active');
+                document.getElementById('loginForm').classList.remove('active');
+                document.getElementById('forgotPasswordForm').classList.remove('active');
+            });
+            
+            document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('loginForm').classList.remove('active');
+                document.getElementById('signupForm').classList.remove('active');
+                document.getElementById('forgotPasswordForm').classList.add('active');
+            });
+            
+            document.getElementById('backToLoginLink').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('forgotPasswordForm').classList.remove('active');
+                document.getElementById('loginForm').classList.add('active');
+            });
+            
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('signupForm').addEventListener('submit', handleSignup);
+            document.getElementById('forgotPasswordForm').addEventListener('submit', handleForgotPassword);
+            document.getElementById('newClockInForm').addEventListener('submit', handleStartClockIn);
+            document.getElementById('newClockOutForm').addEventListener('submit', handleStartClockOut);
+        }
+
+        function showAuth() {
+            document.getElementById('authSection').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            showApp('clockin');
+        }
+
+        function showApp(appName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            document.getElementById(appName).style.display = 'block';
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (appName === 'clockin') {
+                document.querySelector('.nav-btn').classList.add('active');
+                updateClockInStats();
+                updateClockInsTable();
+            } else if (appName === 'clockout') {
+                document.querySelectorAll('.nav-btn')[1].classList.add('active');
+                updateClockOutStats();
+                updateClockOutTable();
+            } else if (appName === 'attendance') {
+                document.querySelectorAll('.nav-btn')[2].classList.add('active');
+                updateAllAttendanceTable();
+            }
+        }
+
+        function loadSavedData() {
+            const savedClockIns = localStorage.getItem('clockIns');
+            if (savedClockIns) {
+                clockIns = JSON.parse(savedClockIns);
+            } else {
+                clockIns = [];
+            }
+            
+            const savedClockOuts = localStorage.getItem('clockOuts');
+            if (savedClockOuts) {
+                clockOuts = JSON.parse(savedClockOuts);
+            } else {
+                clockOuts = [];
+            }
+            
+            const savedAttendance = localStorage.getItem('attendanceRecords');
+            if (savedAttendance) {
+                attendanceRecords = JSON.parse(savedAttendance);
+            } else {
+                attendanceRecords = [];
+            }
+        }
+
+        function updateStaffInfo(user) {
+            if (!user) return;
+            
+            document.getElementById('staffInfoPanel').style.display = 'flex';
+            document.getElementById('staffAvatar').textContent = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+            document.getElementById('staffName').textContent = user.name || 'Staff Member';
+            document.getElementById('staffID').textContent = user.staffId || 'NSPM/STF/001';
+            document.getElementById('staffDept').textContent = user.department || 'Not Set';
+            document.getElementById('staffLocation').textContent = user.location || 'Not Set';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const staffId = document.getElementById('loginId').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!staffId || !password) {
+                showResult('error', 'Error', 'Please enter both Staff ID and password');
+                return;
+            }
+            
+            showLoading('Signing in...');
+            
+            try {
+                // Demo login - in production, use Firebase Auth
+                const mockUser = {
+                    id: 'user_' + Date.now(),
+                    name: 'Demo Staff',
+                    email: staffId + '@nspm.gov.ng',
+                    staffId: staffId,
+                    department: 'ICT',
+                    location: 'Head Office',
+                    role: 'staff'
+                };
+                
+                currentUser = mockUser;
+                localStorage.setItem('currentUser', JSON.stringify(mockUser));
+                
+                updateStaffInfo(mockUser);
+                hideLoading();
+                showDashboard();
+                loadSavedData();
+                showResult('success', 'Welcome!', `Logged in as ${mockUser.name}`);
+                
+            } catch (error) {
+                hideLoading();
+                console.error(error);
+                showResult('error', 'Login Failed', 'Invalid credentials');
+            }
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const staffId = document.getElementById('userId').value;
+            const department = document.getElementById('department').value;
+            const location = document.getElementById('location').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirm) {
+                showResult('error', 'Error', 'Passwords do not match');
+                return;
+            }
+            
+            showLoading('Creating account...');
+            
+            try {
+                const newUser = {
+                    id: 'user_' + Date.now(),
+                    name: name,
+                    email: email,
+                    staffId: staffId,
+                    department: department,
+                    location: location,
+                    role: 'staff'
+                };
+                
+                currentUser = newUser;
+                localStorage.setItem('currentUser', JSON.stringify(newUser));
+                
+                updateStaffInfo(newUser);
+                hideLoading();
+                showDashboard();
+                showResult('success', 'Account Created!', 'Your account has been created successfully');
+                
+            } catch (error) {
+                hideLoading();
+                showResult('error', 'Error', 'Could not create account');
+            }
+        }
+
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            showResult('success', 'Email Sent', 'Password reset instructions have been sent');
+            setTimeout(() => {
+                document.getElementById('forgotPasswordForm').classList.remove('active');
+                document.getElementById('loginForm').classList.add('active');
+            }, 2000);
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                currentUser = null;
+                localStorage.removeItem('currentUser');
+                showAuth();
+            }
+        }
+
+        // =============================================
+        // CLOCK IN FUNCTIONS
+        // =============================================
+        function openClockInModal() {
+            document.getElementById('newClockInModal').style.display = 'flex';
+        }
+
+        function closeClockInModal() {
+            document.getElementById('newClockInModal').style.display = 'none';
+        }
+
+        function handleStartClockIn(e) {
+            e.preventDefault();
+            
+            const department = document.getElementById('newClockInDepartment').value;
+            const location = document.getElementById('newClockInLocation').value;
+            
+            if (!department || !location) {
+                alert('Please fill all fields');
+                return;
+            }
+            
+            const sessionId = 'clockin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            const newClockIn = {
+                id: clockIns.length + 1,
+                sessionId: sessionId,
+                department: department,
+                location: location,
+                startTime: new Date().toISOString(),
+                status: 'active',
+                scannedStaff: []
+            };
+            
+            clockIns.push(newClockIn);
+            localStorage.setItem('clockIns', JSON.stringify(clockIns));
+            
+            closeClockInModal();
+            updateClockInsTable();
+            showQRModal(sessionId, department, location, 'clockin');
+            
+            document.getElementById('newClockInForm').reset();
+        }
+
+        function updateClockInsTable() {
+            const tbody = document.getElementById('clockInsTableBody');
+            tbody.innerHTML = '';
+            
+            const activeClockIns = clockIns.filter(c => c.status === 'active');
+            
+            if (activeClockIns.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-clock" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                            <h3>No Active Clock In Sessions</h3>
+                            <p>Click "Start Clock In" to begin</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            activeClockIns.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+            
+            activeClockIns.forEach(session => {
+                const row = document.createElement('tr');
+                const scannedCount = session.scannedStaff ? session.scannedStaff.length : 0;
+                
+                row.innerHTML = `
+                    <td>${session.department}</td>
+                    <td>${session.location}</td>
+                    <td>${new Date(session.startTime).toLocaleString()}</td>
+                    <td><span class="status-badge status-clockin">ACTIVE</span></td>
+                    <td>${scannedCount} staff</td>
+                    <td>
+                        <button class="dashboard-btn dashboard-btn-primary" onclick="showQRModal('${session.sessionId}', '${session.department}', '${session.location}', 'clockin')">
+                            <i class="fas fa-qrcode"></i> Show QR
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateClockInStats() {
+            const total = clockIns.length;
+            const active = clockIns.filter(c => c.status === 'active').length;
+            
+            const today = new Date().toISOString().split('T')[0];
+            const todayClockIns = clockIns.filter(c => 
+                c.startTime && c.startTime.startsWith(today)
+            ).length;
+            
+            document.getElementById('totalClockIns').textContent = total;
+            document.getElementById('activeClockIns').textContent = active;
+            document.getElementById('todayClockIns').textContent = todayClockIns;
+        }
+
+        // =============================================
+        // CLOCK OUT FUNCTIONS
+        // =============================================
+        function openClockOutModal() {
+            document.getElementById('newClockOutModal').style.display = 'flex';
+        }
+
+        function closeClockOutModal() {
+            document.getElementById('newClockOutModal').style.display = 'none';
+        }
+
+        function handleStartClockOut(e) {
+            e.preventDefault();
+            
+            const department = document.getElementById('newClockOutDepartment').value;
+            const location = document.getElementById('newClockOutLocation').value;
+            
+            if (!department || !location) {
+                alert('Please fill all fields');
+                return;
+            }
+            
+            const sessionId = 'clockout_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            const newClockOut = {
+                id: clockOuts.length + 1,
+                sessionId: sessionId,
+                department: department,
+                location: location,
+                startTime: new Date().toISOString(),
+                status: 'active',
+                scannedStaff: []
+            };
+            
+            clockOuts.push(newClockOut);
+            localStorage.setItem('clockOuts', JSON.stringify(clockOuts));
+            
+            closeClockOutModal();
+            showQRModal(sessionId, department, location, 'clockout');
+            
+            document.getElementById('newClockOutForm').reset();
+        }
+
+        function updateClockOutTable() {
+            const tbody = document.getElementById('clockOutTableBody');
+            tbody.innerHTML = '';
+            
+            const activeClockOuts = clockOuts.filter(c => c.status === 'active');
+            
+            if (activeClockOuts.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-door-open" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                            <h3>No Active Clock Out Sessions</h3>
+                            <p>Click "Start Clock Out" to begin</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            activeClockOuts.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+            
+            activeClockOuts.forEach(session => {
+                const row = document.createElement('tr');
+                const scannedCount = session.scannedStaff ? session.scannedStaff.length : 0;
+                
+                row.innerHTML = `
+                    <td>${session.department}</td>
+                    <td>${session.location}</td>
+                    <td>${new Date(session.startTime).toLocaleString()}</td>
+                    <td><span class="status-badge status-clockout">ACTIVE</span></td>
+                    <td>${scannedCount} staff</td>
+                    <td>
+                        <button class="dashboard-btn dashboard-btn-primary" onclick="showQRModal('${session.sessionId}', '${session.department}', '${session.location}', 'clockout')">
+                            <i class="fas fa-qrcode"></i> Show QR
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateClockOutStats() {
+            const total = clockOuts.length;
+            const active = clockOuts.filter(c => c.status === 'active').length;
+            
+            const today = new Date().toISOString().split('T')[0];
+            const completedToday = clockOuts.filter(c => 
+                c.status === 'completed' && c.startTime && c.startTime.startsWith(today)
+            ).length;
+            
+            document.getElementById('totalClockOuts').textContent = total;
+            document.getElementById('activeClockOuts').textContent = active;
+            document.getElementById('completedToday').textContent = completedToday;
+        }
+
+        // =============================================
+        // QR CODE FUNCTIONS
+        // =============================================
+        function showQRModal(sessionId, department, location, type) {
+            if (type === 'clockin') {
+                currentSessionId = sessionId;
+                document.getElementById('qrDepartment').textContent = department;
+                document.getElementById('qrLocation').textContent = location;
+                document.getElementById('qrSessionId').textContent = sessionId;
+                
+                generateQRCode(sessionId, department, location, type, 'qrCodeContainer');
+                startTimer(10, 'qrTimer', 'timerValue', 'qrModal');
+                updateScanStatus(sessionId);
+                
+                document.getElementById('qrModal').style.display = 'flex';
+            } else {
+                currentClockOutSessionId = sessionId;
+                document.getElementById('clockOutQrDepartment').textContent = department;
+                document.getElementById('clockOutQrLocation').textContent = location;
+                document.getElementById('clockOutQrSessionId').textContent = sessionId;
+                
+                generateQRCode(sessionId, department, location, type, 'clockOutQrCodeContainer');
+                startTimer(10, 'clockOutQrTimer', 'clockOutTimerValue', 'clockOutQrModal');
+                updateClockOutScanStatus(sessionId);
+                
+                document.getElementById('clockOutQrModal').style.display = 'flex';
+            }
+        }
+
+        function generateQRCode(sessionId, department, location, type, containerId) {
+            const container = document.getElementById(containerId);
+            
+            // Include current user info in QR data
+            const qrData = {
+                sessionId: sessionId,
+                department: department,
+                location: location,
+                staffId: currentUser ? currentUser.staffId : 'unknown',
+                staffName: currentUser ? currentUser.name : 'Unknown Staff',
+                timestamp: Date.now(),
+                type: type
+            };
+            
+            const jsonString = JSON.stringify(qrData);
+            const encodedData = encodeURIComponent(jsonString);
+            
+            container.innerHTML = `<img class="qr-code-image" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}" alt="QR Code">`;
+        }
+
+        function startTimer(minutes, timerId, valueId, modalId) {
+            let timeLeft = minutes * 60;
+            if (timerId === 'qrTimer' && qrTimerInterval) clearInterval(qrTimerInterval);
+            if (timerId === 'clockOutQrTimer' && clockOutQrTimerInterval) clearInterval(clockOutQrTimerInterval);
+            
+            const interval = setInterval(() => {
+                timeLeft--;
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                document.getElementById(valueId).textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    document.getElementById(modalId).style.display = 'none';
+                }
+            }, 1000);
+            
+            if (timerId === 'qrTimer') {
+                qrTimerInterval = interval;
+            } else {
+                clockOutQrTimerInterval = interval;
+            }
+        }
+
+        async function updateScanStatus(sessionId) {
+            try {
+                const snapshot = await database.ref(`attendance/${sessionId}`).once('value');
+                const data = snapshot.val() || {};
+                const scannedCount = Object.keys(data).length;
+                
+                document.getElementById('scannedCount').textContent = scannedCount;
+                
+                const progress = scannedCount > 0 ? 100 : 0;
+                document.getElementById('scanProgressBar').style.width = progress + '%';
+                
+                document.getElementById('autoScanInfo').innerHTML = scannedCount > 0 ? 
+                    `<i class="fas fa-check-circle" style="color: var(--primary);"></i> ${scannedCount} staff scanned` : 
+                    `<i class="fas fa-sync-alt fa-spin"></i> Waiting for staff to scan...`;
+                    
+            } catch (error) {
+                console.error('Error updating scan status:', error);
+            }
+        }
+
+        async function updateClockOutScanStatus(sessionId) {
+            try {
+                const snapshot = await database.ref(`attendance/${sessionId}`).once('value');
+                const data = snapshot.val() || {};
+                const scannedCount = Object.keys(data).length;
+                
+                document.getElementById('clockOutScannedCount').textContent = scannedCount;
+                
+                const progress = scannedCount > 0 ? 100 : 0;
+                document.getElementById('clockOutScanProgressBar').style.width = progress + '%';
+                
+                document.getElementById('clockOutAutoScanInfo').innerHTML = scannedCount > 0 ? 
+                    `<i class="fas fa-check-circle" style="color: var(--danger);"></i> ${scannedCount} staff clocked out` : 
+                    `<i class="fas fa-sync-alt fa-spin"></i> Waiting for staff to scan...`;
+                    
+            } catch (error) {
+                console.error('Error updating clock out status:', error);
+            }
+        }
+
+        function refreshQRCode() {
+            if (currentSessionId) {
+                const session = clockIns.find(s => s.sessionId === currentSessionId);
+                if (session) {
+                    generateQRCode(currentSessionId, session.department, session.location, 'clockin', 'qrCodeContainer');
+                    startTimer(10, 'qrTimer', 'timerValue', 'qrModal');
+                }
+            }
+        }
+
+        function refreshClockOutQRCode() {
+            if (currentClockOutSessionId) {
+                const session = clockOuts.find(s => s.sessionId === currentClockOutSessionId);
+                if (session) {
+                    generateQRCode(currentClockOutSessionId, session.department, session.location, 'clockout', 'clockOutQrCodeContainer');
+                    startTimer(10, 'clockOutQrTimer', 'clockOutTimerValue', 'clockOutQrModal');
+                }
+            }
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrModal').style.display = 'none';
+            if (qrTimerInterval) clearInterval(qrTimerInterval);
+        }
+
+        function closeClockOutQRModal() {
+            document.getElementById('clockOutQrModal').style.display = 'none';
+            if (clockOutQrTimerInterval) clearInterval(clockOutQrTimerInterval);
+        }
+
+        // =============================================
+        // ATTENDANCE FUNCTIONS
+        // =============================================
+        function setupRealtimeAttendanceListener() {
+            console.log("🔴 Setting up real-time attendance listener");
+            
+            // Listen to attendance path
+            database.ref('attendance').on('value', (snapshot) => {
+                console.log('📊 Attendance data changed');
+                refreshAttendanceNow();
+            });
+            
+            // Listen for new records
+            database.ref('attendance').on('child_added', (sessionSnapshot) => {
+                console.log('📥 New session data:', sessionSnapshot.key);
+                const sessionData = sessionSnapshot.val();
+                
+                if (sessionData && typeof sessionData === 'object') {
+                    Object.keys(sessionData).forEach(recordKey => {
+                        const record = sessionData[recordKey];
+                        if (record && record.staffId) {
+                            // Check if recent (last 10 seconds)
+                            const recordTime = new Date(record.timestamp).getTime();
+                            const now = Date.now();
+                            if (now - recordTime < 10000) {
+                                showInstantNotification(record);
+                            }
+                        }
+                    });
+                }
+                
+                refreshAttendanceNow();
+            });
+        }
+
+        async function refreshAttendanceNow() {
+            console.log("⚡ Refreshing attendance displays");
+            
+            try {
+                const snapshot = await database.ref('attendance').once('value');
+                const firebaseData = snapshot.val() || {};
+                
+                const records = [];
+                
+                // Process all attendance records
+                Object.keys(firebaseData).forEach(sessionId => {
+                    const sessionData = firebaseData[sessionId];
+                    Object.keys(sessionData).forEach(recordKey => {
+                        const record = sessionData[recordKey];
+                        if (record && record.staffId) {
+                            records.push({
+                                ...record,
+                                recordId: recordKey,
+                                sessionId: sessionId
+                            });
+                        }
+                    });
+                });
+                
+                console.log(`📊 Loaded ${records.length} attendance records`);
+                
+                // Update global records
+                attendanceRecords = records;
+                localStorage.setItem('attendanceRecords', JSON.stringify(records));
+                
+                // Update session scanned counts
+                updateSessionScannedCounts(records);
+                
+                // Update all displays
+                updateAllAttendanceTable();
+                updateTodayStats();
+                
+                // Update QR modal if open
+                if (currentSessionId) {
+                    updateScanStatus(currentSessionId);
+                }
+                if (currentClockOutSessionId) {
+                    updateClockOutScanStatus(currentClockOutSessionId);
+                }
+                
+            } catch (error) {
+                console.error('Error refreshing attendance:', error);
+            }
+        }
+
+        function updateSessionScannedCounts(records) {
+            // Update clockIns sessions
+            clockIns.forEach(session => {
+                const sessionRecords = records.filter(r => 
+                    r.sessionId === session.sessionId
+                );
+                session.scannedStaff = sessionRecords.map(r => r.staffId);
+            });
+            
+            // Update clockOuts sessions
+            clockOuts.forEach(session => {
+                const sessionRecords = records.filter(r => 
+                    r.sessionId === session.sessionId
+                );
+                session.scannedStaff = sessionRecords.map(r => r.staffId);
+            });
+            
+            localStorage.setItem('clockIns', JSON.stringify(clockIns));
+            localStorage.setItem('clockOuts', JSON.stringify(clockOuts));
+            
+            updateClockInsTable();
+            updateClockOutTable();
+        }
+
+        function updateAllAttendanceTable() {
+            const tbody = document.getElementById('allAttendanceBody');
+            
+            if (attendanceRecords.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-users-slash" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                            <h3>No Attendance Records</h3>
+                            <p>Staff attendance will appear here when they scan QR codes</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            // Sort by newest first
+            const sorted = [...attendanceRecords].sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+            
+            sorted.slice(0, 50).forEach(record => {
+                const row = document.createElement('tr');
+                const typeColor = record.type === 'clockin' ? 'status-clockin' : 'status-clockout';
+                const typeText = record.type === 'clockin' ? 'CLOCK IN' : 'CLOCK OUT';
+                
+                row.innerHTML = `
+                    <td>${record.staffName || 'Unknown'}</td>
+                    <td>${record.staffId || 'Unknown'}</td>
+                    <td>${record.department || 'N/A'}</td>
+                    <td>${record.location || 'N/A'}</td>
+                    <td><span class="status-badge ${typeColor}">${typeText}</span></td>
+                    <td>${new Date(record.timestamp).toLocaleString()}</td>
+                    <td>${record.sessionId ? record.sessionId.substring(0, 8) + '...' : 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateTodayStats() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            const todayClockIns = attendanceRecords.filter(r => 
+                r.type === 'clockin' && r.timestamp && r.timestamp.startsWith(today)
+            ).length;
+            
+            const todayClockOuts = attendanceRecords.filter(r => 
+                r.type === 'clockout' && r.timestamp && r.timestamp.startsWith(today)
+            ).length;
+            
+            // Calculate currently present (clocked in but not clocked out)
+            const clockedInStaff = new Set();
+            const clockedOutStaff = new Set();
+            
+            attendanceRecords.forEach(r => {
+                if (r.type === 'clockin') {
+                    clockedInStaff.add(r.staffId);
+                } else if (r.type === 'clockout') {
+                    clockedOutStaff.add(r.staffId);
+                }
+            });
+            
+            const presentStaff = clockedInStaff.size - clockedOutStaff.size;
+            
+            document.getElementById('summaryClockIns').textContent = todayClockIns;
+            document.getElementById('summaryClockOuts').textContent = todayClockOuts;
+            document.getElementById('summaryPresent').textContent = Math.max(0, presentStaff);
+        }
+
+        function showInstantNotification(record) {
+            const notification = document.createElement('div');
+            notification.className = 'floating-notification';
+            
+            const type = record.type === 'clockin' ? 'CLOCKED IN' : 'CLOCKED OUT';
+            const color = record.type === 'clockin' ? '#44ff44' : '#ff5555';
+            
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 24px;">
+                        <i class="fas fa-${record.type === 'clockin' ? 'sign-in-alt' : 'sign-out-alt'}" style="color: ${color};"></i>
+                    </div>
+                    <div>
+                        <strong style="color: ${color};">${type}</strong><br>
+                        ${record.staffName} (${record.staffId})<br>
+                        <small>${new Date(record.timestamp).toLocaleTimeString()}</small>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        // =============================================
+        // UI HELPER FUNCTIONS
+        // =============================================
+        function showLoading(message) {
+            document.getElementById('loadingMessage').textContent = message || 'Processing...';
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showResult(type, title, message) {
+            const modal = document.getElementById('resultModal');
+            const content = document.getElementById('resultContent');
+            const icon = document.getElementById('resultIcon');
+            
+            content.className = `result-content ${type === 'success' ? 'result-success' : 'result-error'}`;
+            icon.innerHTML = type === 'success' ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
+            document.getElementById('resultTitle').textContent = title;
+            document.getElementById('resultMessage').innerHTML = message;
+            
+            modal.style.display = 'flex';
+            
+            if (type === 'success') {
+                setTimeout(closeResult, 3000);
+            }
+        }
+
+        function closeResult() {
+            document.getElementById('resultModal').style.display = 'none';
+        }
+
+        // Logout button in header
+        const logoutBtn = document.createElement('button');
+        logoutBtn.className = 'dashboard-btn dashboard-btn-danger';
+        logoutBtn.style.position = 'absolute';
+        logoutBtn.style.top = '20px';
+        logoutBtn.style.right = '20px';
+        logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
+        logoutBtn.onclick = logout;
+        document.querySelector('.header').appendChild(logoutBtn);
+    </script>
+</body>
+</html>
